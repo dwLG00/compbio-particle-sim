@@ -18,94 +18,94 @@ const sec_width = canvas.width / divx;
 const sec_height = canvas.height / divy;
 
 function pos_to_sector(x, y) {
-	// Takes (x, y) coordinates to sector id (left-to-right, top-to-bottom).
-	let sec_x = Math.floor(x / sec_width);
-	let sec_y = Math.floor(y / sec_height);
-	return sec_y * divx + sec_x;
+    // Takes (x, y) coordinates to sector id (left-to-right, top-to-bottom).
+    let sec_x = Math.floor(x / sec_width);
+    let sec_y = Math.floor(y / sec_height);
+    return sec_y * divx + sec_x;
 }
 
 // Set up sectors
 let sectors = new Array(n_sectors);
 for (var i = 0; i < n_sectors; i += 1) {
-	sectors[i] = Array();
+    sectors[i] = Array();
 }
 
 // Particle data structure
 class Particle {
-	constructor(x, y, forcefunc) {
-		// Constructor
+    constructor(x, y, forcefunc) {
+        // Constructor
 
-		// Position
-		this.x = x;
-		this.y = y;
+        // Position
+        this.x = x;
+        this.y = y;
 
-		// Velocity and force
-		this.vx = 0;
-		this.vy = 0;
-		this.fx = 0;
-		this.fy = 0;
+        // Velocity and force
+        this.vx = 0;
+        this.vy = 0;
+        this.fx = 0;
+        this.fy = 0;
 
-		// force calculation function
-		this._force = forcefunc;
-	}
+        // force calculation function
+        this._force = forcefunc;
+    }
 
-	// Getters
-	get pos() {
-		return [this.x, this.y];
-	}
-	get vel() {
-		return [this.vx, this.vy];
-	}
-	get force() {
-		return [this.fx, this.fy];
-	}
-	get sector() {
-		return pos_to_sector(this.x, this.y);
-	}
+    // Getters
+    get pos() {
+        return [this.x, this.y];
+    }
+    get vel() {
+        return [this.vx, this.vy];
+    }
+    get force() {
+        return [this.fx, this.fy];
+    }
+    get sector() {
+        return pos_to_sector(this.x, this.y);
+    }
 
-	// Calculating force
-	apply_force(source_point) {
-		// Calculate force applied to self by other point
-		let [fx, fy] = force(this, source_point);
-		// This math probably comes from solving an integral. I'm bad at physics so it could be bogus
-		this.vx += fx * dt;
-		this.vy += fy * dt;
-	}
+    // Calculating force
+    apply_force(source_point) {
+        // Calculate force applied to self by other point
+        let [fx, fy] = force(this, source_point);
+        // This math probably comes from solving an integral. I'm bad at physics so it could be bogus
+        this.vx += fx * dt;
+        this.vy += fy * dt;
+    }
 
-	tick() {
-		// Updates position from velocity and bound
-		this.x += this.vx * dt;
-		this.y += this.vy * dt;
+    tick() {
+        // Updates position from velocity and bound
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
 
-		if (this.x > canvas.width) {
-			this.x -= canvas.width;
-		}
-		if (this.x < canvas.width) {
-			this.x += canvas.width;
-		}
-		if (this.y > canvas.height) {
-			this.y -= canvas.height;
-		}
-		if (this.y < canvas.height) {
-			this.y += canvas.height;
-		}
-	}
+        if (this.x > canvas.width) {
+            this.x -= canvas.width;
+        }
+        if (this.x < canvas.width) {
+            this.x += canvas.width;
+        }
+        if (this.y > canvas.height) {
+            this.y -= canvas.height;
+        }
+        if (this.y < canvas.height) {
+            this.y += canvas.height;
+        }
+    }
 
-	// Helper functions
-	static d2(p1, p2) {
-		// Distance squared
-		return p1.dx * p2.dx + p1.dy * p2.dy;
-	}
-	static dist(p1, p2) {
-		// Cartesian distance
-		let dR = this.constructor.d2(p1, p2);
-		return Math.sqrt(dR); // This might be a bit slow
-	}
+    // Helper functions
+        static d2(p1, p2) {
+        // Distance squared
+        return p1.dx * p2.dx + p1.dy * p2.dy;
+    }
+    static dist(p1, p2) {
+        // Cartesian distance
+        let dR = this.constructor.d2(p1, p2);
+        return Math.sqrt(dR); // This might be a bit slow
+    }
 }
 
 class Simulation {
-	constructor() {
-	}
+    constructor() {
+    }
 }
 
 
