@@ -59,6 +59,9 @@ class Particle {
 	get force() {
 		return [this.fx, this.fy];
 	}
+	get sector() {
+		return pos_to_sector(this.x, this.y);
+	}
 
 	// Calculating force
 	apply_force(source_point) {
@@ -67,6 +70,25 @@ class Particle {
 		// This math probably comes from solving an integral. I'm bad at physics so it could be bogus
 		this.vx += fx * dt;
 		this.vy += fy * dt;
+	}
+
+	tick() {
+		// Updates position from velocity and bound
+		this.x += this.vx * dt;
+		this.y += this.vy * dt;
+
+		if (this.x > canvas.width) {
+			this.x -= canvas.width;
+		}
+		if (this.x < canvas.width) {
+			this.x += canvas.width;
+		}
+		if (this.y > canvas.height) {
+			this.y -= canvas.height;
+		}
+		if (this.y < canvas.height) {
+			this.y += canvas.height;
+		}
 	}
 
 	// Helper functions
@@ -81,7 +103,10 @@ class Particle {
 	}
 }
 
-
+class Simulation {
+	constructor() {
+	}
+}
 
 
 
