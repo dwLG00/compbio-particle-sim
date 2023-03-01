@@ -17,11 +17,29 @@ const n_sectors = divx * divy;
 const sec_width = canvas.width / divx;
 const sec_height = canvas.height / divy;
 
+const repel_distance = 1
+
 function pos_to_sector(x, y) {
     // Takes (x, y) coordinates to sector id (left-to-right, top-to-bottom).
     let sec_x = Math.floor(x / sec_width);
     let sec_y = Math.floor(y / sec_height);
     return sec_y * divx + sec_x;
+}
+
+function* adjacent_sectors(sector) {
+    // Yields a list of sectors that are adjacent to given sector (max 8 sectors)
+    if (sector % divx > 0) {
+        yield sector - 1;
+        if ((sector - 1) / divx >= 1) { yield (sector - 1) - divx; }
+        if ((sector - 1) / divx < (divy - 1)) { yield (sector - 1) + divx; }
+    }
+    if (sector % divx < (divx - 1)) {
+        yield sector + 1;
+        if ((sector + 1) / divx >= 1) { yield (sector - 1) - divx; }
+        if ((sector + 1) / divx < (divy - 1)) { yield (sector - 1) + divx; }
+    }
+    if (sector / divx >= 1) { yield sector - divx; }
+    if (sector / divx < (divy - 1)) { yield sector + divx; }
 }
 
 // Set up sectors
@@ -32,8 +50,11 @@ for (var i = 0; i < n_sectors; i += 1) {
 
 // Particle data structure
 class Particle {
-    constructor(x, y, forcefunc) {
+    constructor(type, x, y, forcefunc) {
         // Constructor
+
+        // Type
+        this.type = type;
 
         // Position
         this.x = x;
@@ -66,7 +87,7 @@ class Particle {
     // Calculating force
     apply_force(source_point) {
         // Calculate force applied to self by other point
-        let [fx, fy] = force(this, source_point);
+        let [fx, fy] = this._force(this, source_point);
         // This math probably comes from solving an integral. I'm bad at physics so it could be bogus
         this.vx += fx * dt;
         this.vy += fy * dt;
@@ -92,7 +113,7 @@ class Particle {
     }
 
     // Helper functions
-        static d2(p1, p2) {
+    static d2(p1, p2) {
         // Distance squared
         return p1.dx * p2.dx + p1.dy * p2.dy;
     }
@@ -104,7 +125,49 @@ class Particle {
 }
 
 class Simulation {
-    constructor() {
+    constructor(particles) {
+        let this.particles = particles;
+        // Add them all to the sectors array
+        this.particles.forEach((particle, i) => {
+            let [x, y] = particle.pos;
+            sectors[pos_to_sector(x, y)].push(particle);
+        });
+    }
+    tick() {
+        // Apply forces
+        for (let i = 0; i < sectors.length; i++) { // For each sector
+            let csector = sectors[i];
+            let neighbors = [...adjacent_sectors(i)]; // Get all neighbors
+            neighbors.forEach((i, neighbor_sector) => { // For each neighbor
+                if (sectors[neighbor_sector].length == 0) { return; } // Skip if empty
+                for (const source of csector) { // For particle in source sector
+                    for (const target of sectors[neighbor_sector]) { // For particle in neighbor sector
+                        source.apply_force(target); // Apply force
+                    }
+                }
+            });
+        }
+
+        // Actually apply the force thing
+        for (let i = 0; i < sectors.length; i++) {
+            let remove = Array();
+            sectors[i].forEach((j, particle) => {
+                particle.tick();
+                let [x, y] = particle.pos;
+                true_sector = pos_to_sector(x, y);
+                if (i != true_sector) { // If we need the particle to go to a new sector, add it to that sector and add its index to a list to be removed.
+                    remove.push(j);
+                }
+                sectors[true_sector].push(particle);
+            });
+            sectors[i] = sectors[i].reduce((acc, value, index) => { // Remove all remove-marked particles
+                remove.indexOf(index) == -1 ? [...acc, value] : acc}, []
+            ); // https://www.geeksforgeeks.org/how-to-remove-multiple-elements-from-array-in-javascript/
+
+        }
+
+        // TODO somehow change which sectors which particles are in
+
     }
 }
 
