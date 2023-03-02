@@ -10,8 +10,8 @@ canvas.height = window.innerHeight;
 const dt = 1/60;
 
 // Sector constants (for calculating particle forces)
-const divx = 10;
-const divy = 10;
+const divx = 5;
+const divy = 5;
 const n_sectors = divx * divy;
 
 const sec_width = canvas.width / divx;
@@ -356,6 +356,7 @@ function main() {
 
     // Set up simulation first
     let simulation = new Simulation(particles);
+    let last_hash = 0;
 
     // Call animate to start loop
     animate = () => {
@@ -374,6 +375,9 @@ function main() {
                     }
                 }
                 console.log('Frame hash: ' + sum);
+                if (last_hash != sum) {
+                    console.log('hash stagnant');
+                }
             }
             draw_counter = 0;
         }
