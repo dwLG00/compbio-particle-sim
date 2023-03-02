@@ -38,6 +38,8 @@
         let export_array = new Array();
         let mainloop_counter = 0;
         let stop_mainloop = 300;
+        let sampling = 10; // Only 1 in 10
+        let blur_factor = 20;
 
         const maxRadius = 200;
         const maxClusters = 20;
@@ -97,6 +99,43 @@
             },
             gui: null,
         }
+
+
+
+
+
+
+        const rasterize = (particles_array) => { // My Function
+            let arrays = new Array();
+            let width = Math.round(canvas.width / blur_factor);
+            let height = Math.round(canvas.height / blur_factor);
+            let size = width * height;
+            for (let i = 0; i < settings.numColors; i++) {
+                let channel = new Array(size);
+                for (let j = 0; j < size; j++) { channel[j] = 0; }
+                arrays.push(channel);
+            }
+
+            for (const particle of particles_array) {
+                let cell = Math.round(particle[1] / blur_factor) * width + Math.round(particle[0] / blur_factor);
+                arrays[particle[2]][cell] = 255;
+            }
+            return arrays;
+        };
+
+        const rasterize_all = (particles_arrays) => {
+            let rasterized_array = new Array();
+            for (let i = 0; i < particles_arrays.length; i += sampling) {
+                console.log(i);
+                let parray = particles_arrays[i];
+                let rasterized = rasterize(parray);
+                rasterized_array.push(rasterized);
+            }
+            return rasterized_array;
+        }
+
+
+
 
         const setupClicks = () => {
             canvas.addEventListener('click',
