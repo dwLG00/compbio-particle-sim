@@ -34,7 +34,7 @@ function toggleDebug() {
 
 let loop_counter = 0;
 let draw_counter = 0;
-let terminate_flag = -1;
+let terminate_flag = 100;
 
 
 
@@ -366,6 +366,14 @@ function main() {
             if (debug) {
                 console.log('Loop ' + loop_counter);
                 console.log('Draws: ' + draw_counter);
+
+                let sum = 0;
+                for (let i = 0; i < sectors.length; i++) {
+                    for (let j = 0; j < sectors[i].length; j++) {
+                        sum += (sectors[i][j].x * sectors[i][j].y);
+                    }
+                }
+                console.log('Frame hash: ' + sum);
             }
             draw_counter = 0;
         }
@@ -387,7 +395,8 @@ function main() {
         frames.push(cframe);
     }
     */
+    return simulation;
 }
 
-main();
+let simu = main();
 //animate_frames(frames);
