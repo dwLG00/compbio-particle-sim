@@ -17,8 +17,8 @@ const n_sectors = divx * divy;
 const sec_width = canvas.width / divx;
 const sec_height = canvas.height / divy;
 
-const repel_distance = 1
-
+const repel_distance = 1;
+const repel_strength = 1;
 
 // Debug section don't touch
 let debug = 1;
@@ -31,6 +31,8 @@ function toggleDebug() {
 }
 
 let loop_counter = 0;
+let draw_counter = 0;
+let terminate_flag = -1;
 
 // Helper functions
 function pos_to_sector(x, y) {
@@ -105,10 +107,29 @@ class Particle {
     }
 
     // Calculating force
-    apply_force(source_point) {
-        // Calculate force applied to self by other point
-        let f = this._force(this, source_point);
-        let [fx, fy] = this._force(this, source_point);
+    apply_force(target_point) {
+        // Calculate force applied to other by self
+
+        // Constants
+        let dx = this.x - target_point.x;
+        let dy = this.y - target_point.y;
+        let dR = dx*dx + dy*dy;
+        let dr = Math.sqrt(dR);
+        let a = Math.atan(dy, dx);
+        let xangle = Math.cos(a);
+        let yangle = Math.sin(a);
+
+        let f = 0;
+
+        if (0 < dr < repel_distance) {
+            f = repel_strength * (repel_distance - dr) / (dr + 1);
+        }
+        if (dr > repel_distance) {
+            f = this._force(this, target_point) * (dr - repel_distance);
+        }
+        let fx = f * xangle;
+        let fy = f * yangle;
+
         // This math probably comes from solving an integral. I'm bad at physics so it could be bogus
         this.vx += fx * dt;
         this.vy += fy * dt;
@@ -163,22 +184,29 @@ class Simulation {
         this.particles = particles;
         // Add them all to the sectors array
         this.particles.forEach((particle, i) => {
-            sectors[pos_to_sector(particle.x, particle.y)].push(particle);
+            let sector = pos_to_sector(particle.x, particle.y);
+            sectors[sector].push(particle);
+            if (debug) { console.log('Pushed (' + particle.x + ', ' + particle.y + ') to ' + sector) }
         });
+        if (debug) {
+            for (let i = 0; i < sectors.length; i++) {
+                console.log('Sector ' + i + ': ' + sectors[i].length + ' particles');
+            }
+        }
     }
     tick() {
         // Apply forces
         for (let i = 0; i < sectors.length; i++) { // For each sector
             let csector = sectors[i];
             let neighbors = [...adjacent_sectors(i)]; // Get all neighbors
-            neighbors.forEach((i, neighbor_sector) => { // For each neighbor
+            for (const neighbor_sector of neighbors) { // For each neighbor
                 if (sectors[neighbor_sector].length == 0) { return; } // Skip if empty
                 for (const source of csector) { // For particle in source sector
                     for (const target of sectors[neighbor_sector]) { // For particle in neighbor sector
                         source.apply_force(target); // Apply force
                     }
                 }
-            });
+            }
         }
 
         // Actually apply the force thing
@@ -211,6 +239,7 @@ function drawDot(color, x, y) {
     // TODO Implement
     ctx.fillStyle = color;
     ctx.fillRect(x, y, 1, 1);
+    draw_counter++;
 }
 
 function drawParticle(particle) {
@@ -289,10 +318,16 @@ function main() {
 
     // Call animate to start loop
     animate = () => {
-        requestAnimationFrame(animate);
-        frame_animate(simulation);
-        loop_counter += 1;
-        if (debug) { console.log('Loop ' + loop_counter); }
+        if (loop_counter != terminate_flag) {
+            loop_counter += 1;
+            requestAnimationFrame(animate);
+            frame_animate(simulation);
+            if (debug) {
+                console.log('Loop ' + loop_counter);
+                console.log('Draws: ' + draw_counter);
+            }
+            draw_counter = 0;
+        }
     }
     animate();
 }
