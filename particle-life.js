@@ -7,11 +7,11 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // Simulation settings
-const dt = 1;
+const dt = 1/60;
 
 // Sector constants (for calculating particle forces)
-const divx = 5;
-const divy = 5;
+const divx = 10;
+const divy = 10;
 const n_sectors = divx * divy;
 
 const sec_width = canvas.width / divx;
@@ -19,6 +19,8 @@ const sec_height = canvas.height / divy;
 
 const repel_distance = 2;
 const repel_strength = 1;
+
+const epsilon = 0.000001; // Needed for some sector shenanigans
 
 // Debug section don't touch
 let debug = 1;
@@ -56,8 +58,8 @@ function* adjacent_sectors(sector) {
     }
     if (sector % divx < (divx - 1)) {
         yield sector + 1;
-        if ((sector + 1) / divx >= 1) { yield (sector - 1) - divx; }
-        if ((sector + 1) / divx < (divy - 1)) { yield (sector - 1) + divx; }
+        if ((sector + 1) / divx >= 1) { yield (sector + 1) - divx; }
+        if ((sector + 1) / divx < (divy - 1)) { yield (sector + 1) + divx; }
     }
     if (sector / divx >= 1) { yield sector - divx; }
     if (sector / divx < (divy - 1)) { yield sector + divx; }
@@ -145,17 +147,17 @@ class Particle {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
 
-        if (this.x > canvas.width) {
-            this.x -= canvas.width;
+        if (this.x >= canvas.width) {
+            this.x = canvas.width - epsilon;
         }
-        if (this.x < canvas.width) {
-            this.x += canvas.width;
+        if (this.x <= 0) {
+            this.x = epsilon;
         }
-        if (this.y > canvas.height) {
-            this.y -= canvas.height;
+        if (this.y >= canvas.height) {
+            this.y = canvas.height - epsilon;
         }
-        if (this.y < canvas.height) {
-            this.y += canvas.height;
+        if (this.y <= 0) {
+            this.y = epsilon;
         }
     }
 
@@ -188,11 +190,11 @@ class Simulation {
     constructor(particles) {
         this.particles = particles;
         // Add them all to the sectors array
-        this.particles.forEach((particle, i) => {
+        for (const particle of this.particles) {
             let sector = pos_to_sector(particle.x, particle.y);
             sectors[sector].push(particle);
             if (debug) { console.log('Pushed (' + particle.x + ', ' + particle.y + ') to ' + sector) }
-        });
+        }
         if (debug) {
             for (let i = 0; i < sectors.length; i++) {
                 console.log('Sector ' + i + ': ' + sectors[i].length + ' particles');
@@ -218,18 +220,24 @@ class Simulation {
         // Actually apply the force thing
         for (let i = 0; i < sectors.length; i++) {
             let remove = Array();
-            sectors[i].forEach((j, particle) => {
+            for (let j = 0; j < sectors[i].length; j++) {
+                let particle = sectors[i][j];
                 particle.tick();
-                true_sector = pos_to_sector(particle.x, particle.y);
+                let true_sector = pos_to_sector(particle.x, particle.y);
                 if (i != true_sector) { // If we need the particle to go to a new sector, add it to that sector and add its index to a list to be removed.
                     remove.push(j);
+                    if (debug) { console.log('New particle pos: (' + particle.x + ', ' + particle.y + ')'); }
+                    if (debug) { console.log('Moving particle to ' + true_sector); }
+                    sectors[true_sector].push(particle);
                 }
-                sectors[true_sector].push(particle);
-            });
+            }
             sectors[i] = sectors[i].reduce((acc, value, index) => { // Remove all remove-marked particles
-                remove.indexOf(index) == -1 ? [...acc, value] : acc}, []
-            ); // https://www.geeksforgeeks.org/how-to-remove-multiple-elements-from-array-in-javascript/
-
+                if (remove.indexOf(index) == -1) {
+                    return [...acc, value];
+                } else {
+                    return acc;
+                }
+            }, []); // https://www.geeksforgeeks.org/how-to-remove-multiple-elements-from-array-in-javascript/
         }
 
     }
@@ -244,7 +252,7 @@ class Simulation {
 function drawDot(color, x, y) {
     // TODO Implement
     ctx.fillStyle = color;
-    ctx.fillRect(x, y, 1, 1);
+    ctx.fillRect(x, y, 5, 5);
     draw_counter++;
 }
 
@@ -276,13 +284,28 @@ function frame_animate(simu) {
     simu.tick();
 }
 
+function animate_frames(frames) {
+    // Animate pre-generated frames
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < frames.length; i++) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let frame = frames[i];
+        for (const particle of frame) {
+            drawParticle(particle);
+        }
+        console.log('Drew frame ' + i);
+    }
+}
+
+let frames = new Array();
+
 // Actual function for running
 function main() {
     let matrix = [ // Force matrix
-        [0,     2,      -2,     0],
-        [2,     0,      1,      2],
-        [-2,    1,      0,      -3],
-        [0,     2,      -3,     0]
+        [0,     1,      -1,     0],
+        [0,     0,      1,     -1],
+        [-1,     0,      0,     1],
+        [1,     -1,      0,     0]
     ];
 
     let forcefunc = (source, target) => { // Function for applying force
@@ -348,6 +371,23 @@ function main() {
         }
     }
     animate();
+
+    /*
+    let n_frames = 60 * 100;
+    for (let i = 0; i < n_frames; i++) {
+        let cframe = new Array();
+        for (let j = 0; j < sectors.length; j++) {
+            for (let k = 0; k < sectors[j].length; k++) {
+                let x = sectors[j][k].x;
+                let y = sectors[j][k].y;
+                let type = sectors[j][k].type;
+                cframe.push({x: x, y: y, type: type});
+            }
+        }
+        frames.push(cframe);
+    }
+    */
 }
 
 main();
+//animate_frames(frames);
