@@ -102,6 +102,45 @@
 
 
 
+        const entropy = (arr2D) => { // Adam's code
+            // Loop through the 2D array and increment the value counts
+            let valueCounts = {};
+            for (let i = 0; i < arr2D.length; i++) {
+              const row = arr2D[i];
+              for (let j = 0; j < row.length; j++) {
+                const value = row[j];
+                if (value in valueCounts) {
+                  valueCounts[value]++;
+                } else {
+                  valueCounts[value] = 1;
+                }
+              }
+            }
+            const valueCounts2 = Object.values(valueCounts);
+            const sum = valueCounts2.reduce((a, b) => a + b, 0);
+
+            // Normalize the list
+            const normalizedList = valueCounts2.map((value) => value / sum);
+
+            // Print the normalized list
+            let entropy = 0;
+            for (const frequency of normalizedList) {
+              entropy -= frequency * Math.log2(frequency);
+            }
+            return entropy;
+        };
+
+        const entropy_all = (rasterizeds) => {
+            let entropies = new Array();
+            for (const rasterized of rasterizeds) {
+                let channel_entropies = new Array();
+                for (const channel_rasterized of rasterized) {
+                    channel_entropies.push(entropy(channel_rasterized));
+                }
+                entropies.push(channel_entropies);
+            }
+            return entropies;
+        }
 
 
 
@@ -111,14 +150,20 @@
             let height = Math.round(canvas.height / blur_factor);
             let size = width * height;
             for (let i = 0; i < settings.numColors; i++) {
-                let channel = new Array(size);
-                for (let j = 0; j < size; j++) { channel[j] = 0; }
+                let channel = new Array(height);
+                for (let j = 0; j < height; j++) {
+                    channel[j] = new Array(width);
+                    for (let k = 0; k < width; k++) {
+                        channel[j][k] = 0;
+                    }
+                }
                 arrays.push(channel);
             }
 
             for (const particle of particles_array) {
-                let cell = Math.round(particle[1] / blur_factor) * width + Math.round(particle[0] / blur_factor);
-                arrays[particle[2]][cell] = 255;
+                let x = Math.floor(particle[0] / blur_factor);
+                let y = Math.floor(particle[1] / blur_factor);
+                arrays[particle[2]][y][x] = 255;
             }
             return arrays;
         };
