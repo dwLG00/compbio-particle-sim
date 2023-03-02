@@ -17,7 +17,7 @@ const n_sectors = divx * divy;
 const sec_width = canvas.width / divx;
 const sec_height = canvas.height / divy;
 
-const repel_distance = 1;
+const repel_distance = 2;
 const repel_strength = 1;
 
 // Debug section don't touch
@@ -34,6 +34,10 @@ let loop_counter = 0;
 let draw_counter = 0;
 let terminate_flag = -1;
 
+
+
+
+
 // Helper functions
 function pos_to_sector(x, y) {
     // Takes (x, y) coordinates to sector id (left-to-right, top-to-bottom).
@@ -44,6 +48,7 @@ function pos_to_sector(x, y) {
 
 function* adjacent_sectors(sector) {
     // Yields a list of sectors that are adjacent to given sector (max 8 sectors)
+    yield sector; // Self
     if (sector % divx > 0) {
         yield sector - 1;
         if ((sector - 1) / divx >= 1) { yield (sector - 1) - divx; }
@@ -200,9 +205,10 @@ class Simulation {
             let csector = sectors[i];
             let neighbors = [...adjacent_sectors(i)]; // Get all neighbors
             for (const neighbor_sector of neighbors) { // For each neighbor
-                if (sectors[neighbor_sector].length == 0) { return; } // Skip if empty
+                let sector = sectors[neighbor_sector];
+                if (sector.length == 0) { return; } // Skip if empty
                 for (const source of csector) { // For particle in source sector
-                    for (const target of sectors[neighbor_sector]) { // For particle in neighbor sector
+                    for (const target of sector) { // For particle in neighbor sector
                         source.apply_force(target); // Apply force
                     }
                 }
@@ -247,6 +253,15 @@ function drawParticle(particle) {
     drawDot(color, particle.x, particle.y);
 }
 
+function drawSector(sector) {
+    let sec_x = sector % divx;
+    let sec_y = Math.floor(sector / divx);
+    let x = sec_x * sec_width;
+    let y = sec_y * sec_height;
+    ctx.fillRect(x, y, sec_width, sec_height);
+}
+
+
 // Animate the current frame
 function frame_animate(simu) {
     // Clear Screen
@@ -254,7 +269,9 @@ function frame_animate(simu) {
     // Draw each particle
     for (let i = 0; i < sectors.length; i++) {
         let points = sectors[i];
-        points.forEach((i, point) => drawParticle(point));
+        for (const point of points) {
+            drawParticle(point);
+        }
     }
     simu.tick();
 }
@@ -262,10 +279,10 @@ function frame_animate(simu) {
 // Actual function for running
 function main() {
     let matrix = [ // Force matrix
-        [0,     1,      -1,     0],
-        [1,     0,      0.5,    1],
-        [-1,    0.5,    0,      -0.2],
-        [0,     1,      -0.2,   0]
+        [0,     2,      -2,     0],
+        [2,     0,      1,      2],
+        [-2,    1,      0,      -3],
+        [0,     2,      -3,     0]
     ];
 
     let forcefunc = (source, target) => { // Function for applying force
@@ -281,25 +298,25 @@ function main() {
     let particle_types = [
         {
             type: 0,
-            number: 10,
+            number: 50,
             color: 'red',
             func: forcefunc
         },
         {
             type: 1,
-            number: 10,
+            number: 50,
             color: 'yellow',
             func: forcefunc
         },
         {
             type: 2,
-            number: 10,
+            number: 50,
             color: 'blue',
             func: forcefunc
         },
         {
             type: 3,
-            number: 10,
+            number: 50,
             color: 'green',
             func: forcefunc
         },
@@ -312,6 +329,7 @@ function main() {
     }
     let particles = particle_arrays.flat();
     if (debug) { console.log('Generated ' + particles.length + ' particles'); }
+    if (debug) { console.log('Colors: ' + colors); }
 
     // Set up simulation first
     let simulation = new Simulation(particles);
