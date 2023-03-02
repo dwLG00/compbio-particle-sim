@@ -19,6 +19,20 @@ const sec_height = canvas.height / divy;
 
 const repel_distance = 1
 
+
+// Debug section don't touch
+let debug = 1;
+function toggleDebug() {
+    if (!debug) {
+        debug = 1;
+    } else {
+        debug = 0;
+    }
+}
+
+let loop_counter = 0;
+
+// Helper functions
 function pos_to_sector(x, y) {
     // Takes (x, y) coordinates to sector id (left-to-right, top-to-bottom).
     let sec_x = Math.floor(x / sec_width);
@@ -42,11 +56,17 @@ function* adjacent_sectors(sector) {
     if (sector / divx < (divy - 1)) { yield sector + divx; }
 }
 
+
+
+
 // Set up sectors
 let sectors = new Array(n_sectors);
 for (var i = 0; i < n_sectors; i += 1) {
     sectors[i] = Array();
 }
+
+let colors = new Array(); // Set up actual colors thing
+
 
 // Particle data structure
 class Particle {
@@ -87,6 +107,7 @@ class Particle {
     // Calculating force
     apply_force(source_point) {
         // Calculate force applied to self by other point
+        let f = this._force(this, source_point);
         let [fx, fy] = this._force(this, source_point);
         // This math probably comes from solving an integral. I'm bad at physics so it could be bogus
         this.vx += fx * dt;
@@ -124,13 +145,25 @@ class Particle {
     }
 }
 
+function generateParticles(n, type, randomX, randomY, forcefunc) {
+    let particles = new Array();
+    for (let i = 0; i < n; i++) {
+        let x = randomX();
+        let y = randomY();
+        let particle = new Particle(type, x, y, forcefunc);
+        particles.push(particle);
+    }
+    if (debug) {console.log('Generated ' + n + ' particles of type ' + type)}
+    return particles;
+}
+
+
 class Simulation {
     constructor(particles) {
-        let this.particles = particles;
+        this.particles = particles;
         // Add them all to the sectors array
         this.particles.forEach((particle, i) => {
-            let [x, y] = particle.pos;
-            sectors[pos_to_sector(x, y)].push(particle);
+            sectors[pos_to_sector(particle.x, particle.y)].push(particle);
         });
     }
     tick() {
@@ -153,8 +186,7 @@ class Simulation {
             let remove = Array();
             sectors[i].forEach((j, particle) => {
                 particle.tick();
-                let [x, y] = particle.pos;
-                true_sector = pos_to_sector(x, y);
+                true_sector = pos_to_sector(particle.x, particle.y);
                 if (i != true_sector) { // If we need the particle to go to a new sector, add it to that sector and add its index to a list to be removed.
                     remove.push(j);
                 }
@@ -166,49 +198,103 @@ class Simulation {
 
         }
 
-        // TODO somehow change which sectors which particles are in
-
     }
 }
 
 
 
-/*
-// Initialize variables for the position and speed of the square
-let x = 0;
-let y = 0;
-let speed = 5;
 
-// Function to draw the square on the canvas
-function drawSquare() {
-  // Clear the entire canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Set the fill color of the square
-  ctx.fillStyle = 'bg-red-500';
 
-  // Draw the square at the current position
-  ctx.fillRect(x, y, 50, 50);
 
-  // Move the square to a new position based on its speed
-  x += speed;
-  y += speed;
-
-  // If the square reaches the edge of the canvas, reverse its direction
-  if (x > canvas.width - 50 || x < 0) {
-    speed = -speed;
-  }
-  if (y > canvas.height - 50 || y < 0) {
-    speed = -speed;
-  }
+function drawDot(color, x, y) {
+    // TODO Implement
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, 1, 1);
 }
 
-// Function to animate the square by calling the drawSquare function repeatedly
-function animate() {
-  requestAnimationFrame(animate);
-  drawSquare();
+function drawParticle(particle) {
+    let color = colors[particle.type];
+    drawDot(color, particle.x, particle.y);
 }
 
-// Call the animate function to start the animation loop
-animate();
-*/
+// Animate the current frame
+function frame_animate(simu) {
+    // Clear Screen
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw each particle
+    for (let i = 0; i < sectors.length; i++) {
+        let points = sectors[i];
+        points.forEach((i, point) => drawParticle(point));
+    }
+    simu.tick();
+}
+
+// Actual function for running
+function main() {
+    let matrix = [ // Force matrix
+        [0,     1,      -1,     0],
+        [1,     0,      0.5,    1],
+        [-1,    0.5,    0,      -0.2],
+        [0,     1,      -0.2,   0]
+    ];
+
+    let forcefunc = (source, target) => { // Function for applying force
+        return matrix[source.type][target.type];
+    };
+    let randomx = () => {
+        return Math.random() * canvas.width;
+    };
+    let randomy = () => {
+        return Math.random() * canvas.height;
+    };
+
+    let particle_types = [
+        {
+            type: 0,
+            number: 10,
+            color: 'red',
+            func: forcefunc
+        },
+        {
+            type: 1,
+            number: 10,
+            color: 'yellow',
+            func: forcefunc
+        },
+        {
+            type: 2,
+            number: 10,
+            color: 'blue',
+            func: forcefunc
+        },
+        {
+            type: 3,
+            number: 10,
+            color: 'green',
+            func: forcefunc
+        },
+    ];
+
+    let particle_arrays = Array();
+    for (const ptype of particle_types) {
+        colors.push(ptype.color);
+        particle_arrays.push(generateParticles(ptype.number, ptype.type, randomx, randomy, ptype.func));
+    }
+    let particles = particle_arrays.flat();
+    if (debug) { console.log('Generated ' + particles.length + ' particles'); }
+
+    // Set up simulation first
+    let simulation = new Simulation(particles);
+
+    // Call animate to start loop
+    animate = () => {
+        requestAnimationFrame(animate);
+        frame_animate(simulation);
+        loop_counter += 1;
+        if (debug) { console.log('Loop ' + loop_counter); }
+    }
+    animate();
+}
+
+main();
