@@ -37,7 +37,7 @@
 
         let export_array = new Array();
         let mainloop_counter = 0;
-        let stop_mainloop = 6000;
+        let stop_mainloop = 300;
 
         const maxRadius = 200;
         const maxClusters = 20;
@@ -552,7 +552,7 @@
                 let catoms = new Array();
                 for (const a of atoms) {
                     // a[0] = x; a[1] = y; a[4] = color;
-                    catoms.push([a[0], a[1], a[4]);
+                    catoms.push([a[0], a[1], a[4]]);
                 }
                 export_array.push(catoms);
                 mainloop_counter++;
